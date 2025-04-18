@@ -4,6 +4,7 @@
   "description": "Dicoding Notes App",
   "main": "main.js",
   "scripts": {
+    "prebuild": "mkdir -p public",
     "build": "webpack --config webpack.prod.js",
     "start-dev": "webpack serve --config webpack.dev.js"
   },
