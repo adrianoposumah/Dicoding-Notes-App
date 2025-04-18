@@ -1,12 +1,11 @@
+import Swal from "sweetalert2";
+import { showNotification } from "../script/utils/notification.js";
+
 class NoteItem extends HTMLElement {
   _note = null;
-  _shadowRoot = null;
-  _style = null;
 
   constructor() {
     super();
-    this._shadowRoot = this.attachShadow({ mode: "open" });
-    this._style = document.createElement("style");
   }
 
   set note(note) {
@@ -14,77 +13,8 @@ class NoteItem extends HTMLElement {
     this.render();
   }
 
-  _updateStyle() {
-    this._style.textContent = `
-      :host {
-        display: block;
-        background-color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        padding: 16px;
-        transition: transform 0.2s ease;
-      }
-      
-      :host(:hover) {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      }
-      
-      h2 {
-        margin-top: 0;
-        color: #333;
-        font-size: 1.2rem;
-      }
-      
-      p {
-        color: #666;
-        margin-bottom: 10px;
-        overflow-wrap: break-word;
-      }
-      
-      .date {
-        font-size: 0.8rem;
-        color: #999;
-        margin-top: auto;
-      }
-      
-      .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      
-      button {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.9rem;
-        transition: background-color 0.2s;
-      }
-      
-      .delete-btn {
-        color: #e74c3c;
-      }
-      
-      .delete-btn:hover {
-        background-color: #fde0dc;
-      }
-      
-      .archive-btn {
-        color: #3498db;
-      }
-      
-      .archive-btn:hover {
-        background-color: #e1f0fa;
-      }
-    `;
-  }
-
   _emptyContent() {
-    this._shadowRoot.innerHTML = "";
+    this.innerHTML = "";
   }
 
   connectedCallback() {
@@ -94,52 +24,87 @@ class NoteItem extends HTMLElement {
   }
 
   _handleDelete(event) {
-    this.dispatchEvent(
-      new CustomEvent("delete-note", {
-        detail: {
-          id: event.target.dataset.id,
-        },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    const noteId = event.target.dataset.id;
+
+    Swal.fire({
+      title: "Apakah akan menghapus note ini?",
+      text: "Setelah dihapus Note tidak akan bisa dikembalikan!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Ya, hapus sekarang!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.dispatchEvent(
+          new CustomEvent("delete-note", {
+            detail: { id: noteId },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }
+    });
   }
 
   _handleArchive(event) {
-    this.dispatchEvent(
-      new CustomEvent("archive-note", {
-        detail: {
-          id: event.target.dataset.id,
-          archived: !this._note.archived,
-        },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    const noteId = event.target.dataset.id;
+    const willArchive = !this._note.archived;
+
+    const actionText = willArchive ? "Arsip" : "Tampilkan";
+
+    Swal.fire({
+      title: `${willArchive ? "Arsipkan" : "Tampilkan"} Note ini?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: `Ya, ${actionText} Note ini!`,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.dispatchEvent(
+          new CustomEvent("archive-note", {
+            detail: {
+              id: noteId,
+              archived: willArchive,
+            },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }
+    });
   }
 
   render() {
     this._emptyContent();
-    this._updateStyle();
-
-    this._shadowRoot.appendChild(this._style);
 
     const formattedDate = new Date(this._note.createdAt).toLocaleDateString();
 
-    this._shadowRoot.innerHTML += `
-      <h2>${this._note.title}</h2>
-      <p>${this._note.body}</p>
-      <div class="date">Created: ${formattedDate}</div>
-      <div class="actions">
-        <button class="archive-btn" data-id="${this._note.id}">
-          ${this._note.archived ? "Unarchive" : "Archive"}
-        </button>
-        <button class="delete-btn" data-id="${this._note.id}">Delete</button>
+    this.innerHTML = `
+      <div class="bg-white rounded-lg shadow p-4 transition transform hover:-translate-y-1 hover:shadow-md">
+        <h2 class="mt-0 text-gray-800 text-lg font-medium">${this._note.title}</h2>
+        <p class="text-gray-600 mb-2 break-words">${this._note.body}</p>
+        <div class="text-xs text-gray-500 mt-auto">Created: ${formattedDate}</div>
+        <div class="flex justify-end gap-2 mt-3">
+          <button class="text-blue-500 py-1 px-2 rounded text-sm transition hover:bg-blue-50" 
+                 data-id="${this._note.id}">
+            ${this._note.archived ? "Unarchive" : "Archive"}
+          </button>
+          <button class="text-red-500 py-1 px-2 rounded text-sm transition hover:bg-red-50" 
+                 data-id="${this._note.id}">Delete</button>
+        </div>
       </div>
     `;
 
-    this._shadowRoot.querySelector(".delete-btn").addEventListener("click", this._handleDelete.bind(this));
-    this._shadowRoot.querySelector(".archive-btn").addEventListener("click", this._handleArchive.bind(this));
+    this.querySelector(".text-red-500").addEventListener(
+      "click",
+      this._handleDelete.bind(this),
+    );
+    this.querySelector(".text-blue-500").addEventListener(
+      "click",
+      this._handleArchive.bind(this),
+    );
   }
 }
 

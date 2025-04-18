@@ -1,10 +1,9 @@
+import { showNotification } from "../script/utils/notification.js";
+import Swal from "sweetalert2";
+
 class NoteForm extends HTMLElement {
   constructor() {
     super();
-    this._shadowRoot = this.attachShadow({ mode: "open" });
-    this._style = document.createElement("style");
-    this._shadowRoot.appendChild(this._style);
-    this._updateStyle();
   }
 
   connectedCallback() {
@@ -13,14 +12,20 @@ class NoteForm extends HTMLElement {
   }
 
   _setupEventListeners() {
-    const form = this._shadowRoot.querySelector("form");
-    const titleInput = this._shadowRoot.querySelector("#title");
-    const bodyInput = this._shadowRoot.querySelector("#body");
+    const form = this.querySelector("form");
+    const titleInput = this.querySelector("#title");
+    const bodyInput = this.querySelector("#body");
 
     form.addEventListener("submit", this._handleSubmit.bind(this));
 
-    titleInput.addEventListener("input", this._validateInput.bind(this, titleInput, 5, 50));
-    bodyInput.addEventListener("input", this._validateInput.bind(this, bodyInput, 10, 300));
+    titleInput.addEventListener(
+      "input",
+      this._validateInput.bind(this, titleInput, 5, 50),
+    );
+    bodyInput.addEventListener(
+      "input",
+      this._validateInput.bind(this, bodyInput, 10, 300),
+    );
   }
 
   _validateInput(inputElement, minLength, maxLength) {
@@ -41,14 +46,12 @@ class NoteForm extends HTMLElement {
     inputElement.reportValidity();
   }
 
-  _handleSubmit(event) {
+  async _handleSubmit(event) {
     event.preventDefault();
 
-    const titleInput = this._shadowRoot.querySelector("#title");
-    const bodyInput = this._shadowRoot.querySelector("#body");
-    const dateInput = this._shadowRoot.querySelector("#date");
+    const titleInput = this.querySelector("#title");
+    const bodyInput = this.querySelector("#body");
 
-    // Tampilkan pesan "wajib diisi" jika input kosong
     [titleInput, bodyInput].forEach((input) => {
       const errorElement = input.nextElementSibling;
       if (!input.value.trim()) {
@@ -58,135 +61,67 @@ class NoteForm extends HTMLElement {
     });
 
     if (!titleInput.checkValidity() || !bodyInput.checkValidity()) {
-      alert("Periksa kembali input yang wajib diisi.");
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Please check your inputs and try again.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
       return;
     }
 
-    const newNote = {
-      id: `notes-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      title: titleInput.value.trim(),
-      body: bodyInput.value.trim(),
-      createdAt: dateInput.value,
-      archived: false,
-    };
+    const submitButton = this.querySelector("button[type='submit']");
+    const originalButtonText = submitButton.textContent;
+    submitButton.textContent = "Adding...";
+    submitButton.disabled = true;
 
-    this.dispatchEvent(
-      new CustomEvent("add-note", {
-        detail: { note: newNote },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    try {
+      const newNote = {
+        title: titleInput.value.trim(),
+        body: bodyInput.value.trim(),
+      };
 
-    titleInput.value = "";
-    bodyInput.value = "";
-  }
+      this.dispatchEvent(
+        new CustomEvent("add-note", {
+          detail: { note: newNote },
+          bubbles: true,
+          composed: true,
+        }),
+      );
 
-  _updateStyle() {
-    this._style.textContent = `
-      :host {
-        display: block;
-        margin-bottom: 20px;
-      }
-      
-      .form-container {
-        background-color: #f5f5f5;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
-      
-      h2 {
-        margin-top: 0;
-        color: #333;
-      }
-      
-      form {
-        display: grid;
-        gap: 15px;
-      }
-      
-      .form-group {
-        display: flex;
-        flex-direction: column;
-      }
-      
-      label {
-        font-weight: bold;
-        margin-bottom: 5px;
-        color: #555;
-      }
-      
-      input, textarea {
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: inherit;
-        font-size: 1rem;
-      }
-      
-      textarea {
-        min-height: 120px;
-        resize: vertical;
-      }
-      
-      input:focus, textarea:focus {
-        outline: none;
-        border-color: #3498db;
-        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-      }
-      
-      input:invalid, textarea:invalid {
-        border-color: #e74c3c;
-      }
-      
-      .error {
-        color: #e74c3c;
-        font-size: 0.9rem;
-        min-height: 20px;
-        margin-top: 5px;
-      }
-      
-      button {
-        padding: 12px;
-        background-color: #3498db;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-      }
-      
-      button:hover {
-        background-color: #2980b9;
-      }
-      
-      button:disabled {
-        background-color: #bdc3c7;
-        cursor: not-allowed;
-      }
-    `;
+      titleInput.value = "";
+      bodyInput.value = "";
+    } catch (error) {
+      showNotification("Failed to add note: " + error.message, "error");
+    } finally {
+      submitButton.textContent = originalButtonText;
+      submitButton.disabled = false;
+    }
   }
 
   render() {
     const today = new Date().toISOString().split("T")[0];
-    this._shadowRoot.innerHTML += `
-      <div class="form-container">
-        <h2>Tambah Notes Baru</h2>
-        <form>
-          <div class="form-group">
-            <label for="title">Judul</label>
-            <input type="text" id="title" placeholder="Masukkan judul catatan" minlength="5" maxlength="50" required />
-            <div class="error"></div>
+    this.innerHTML = `
+      <div class="bg-gray-100 rounded-lg p-5 shadow mb-5">
+        <h2 class="text-lg font-bold text-gray-800 mt-0 mb-4">Tambah Notes Baru</h2>
+        <form class="grid gap-4">
+          <div class="flex flex-col">
+            <label for="title" class="font-semibold mb-1 text-gray-700">Judul</label>
+            <input type="text" id="title" placeholder="Masukkan judul catatan" minlength="5" maxlength="50" required 
+                  class="p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" />
+            <div class="text-red-500 text-sm h-5 mt-1"></div>
           </div>
-          <div class="form-group">
-            <label for="body">Isi Catatan</label>
-            <textarea id="body" placeholder="Masukkan isi catatan" minlength="10" maxlength="300" required></textarea>
-            <div class="error"></div>
+          <div class="flex flex-col">
+            <label for="body" class="font-semibold mb-1 text-gray-700">Isi Catatan</label>
+            <textarea id="body" placeholder="Masukkan isi catatan" minlength="10" maxlength="300" required
+                     class="p-2 border border-gray-300 rounded min-h-[120px] resize-y focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"></textarea>
+            <div class="text-red-500 text-sm h-5 mt-1"></div>
           </div>
-          <input type="date" id="date" value="${today}" hidden />
-          <button type="submit">Tambah Catatan</button>
+          <button type="submit" 
+                 class="py-3 bg-blue-500 text-white border-none rounded text-base cursor-pointer transition-colors hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed">
+            Tambah Catatan
+          </button>
         </form>
       </div>
     `;

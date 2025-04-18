@@ -1,14 +1,18 @@
 const { merge } = require("webpack-merge");
-const common = require("./webpack.config.js");
+const config = require("./webpack.config.js");
+const path = require("path");
 
-module.exports = merge(common, {
+module.exports = merge(config, {
   mode: "development",
-  devtool: "inline-source-map",
+  entry: "./src/index.js",
+  output: {
+    path: path.resolve(__dirname, "dist"),
+    filename: "bundle.js",
+  },
   devServer: {
     static: {
-      directory: require("path").resolve(__dirname, "dist"),
+      directory: path.resolve(__dirname, "dist"),
     },
-    port: 3000,
     open: true,
     hot: true,
     compress: true,
