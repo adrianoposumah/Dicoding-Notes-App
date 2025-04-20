@@ -4,7 +4,7 @@
   "description": "Dicoding Notes App",
   "main": "main.js",
   "scripts": {
-    "prebuild": "mkdir -p public",
+    "prebuild": "npx mkdirp public",
     "build": "webpack --config webpack.prod.js",
     "start-dev": "webpack serve --config webpack.dev.js"
   },
@@ -22,13 +22,14 @@
     "babel-loader": "^8.1.0",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^4.5.0",
+    "mkdirp": "^3.0.1",
     "postcss": "^8.5.3",
     "postcss-loader": "^8.1.1",
     "postcss-preset-env": "^10.1.5",
     "prettier": "3.5.3",
     "style-loader": "^4.0.0",
     "tailwindcss": "^4.1.4",
-    "webpack": "^5.99.5",
+    "webpack": "^5.99.6",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.1",
     "webpack-merge": "^5.9.0"
